@@ -1,0 +1,24 @@
+# Archivos Sensibles (API Keys)
+.env
+env_template.txt
+
+# Carpetas de Python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+.venv/
+
+# Carpetas de Ejecutables (PyInstaller)
+build/
+dist/
+*.spec
+
+# Archivos de Audio Temporales
+temp_audio.mp3
+uploads/
+
+# Otros
+.DS_Store
+.vscode/

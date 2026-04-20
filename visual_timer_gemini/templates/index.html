@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronometrador Visual AI | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f0f10;
+            --sidebar-bg: #18181b;
+            --accent-blue: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --border-color: #27272a;
+            --card-bg: #111113;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Barra Lateral --- */
+        .sidebar {
+            width: 320px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
+            box-sizing: border-box;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: block;
+            font-weight: 600;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+        }
+
+        .info-box {
+            margin-top: auto;
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #93c5fd;
+        }
+
+        /* --- Contenido Principal --- */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        header {
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .upload-area {
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            background-color: var(--card-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .btn-generate {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: var(--accent-blue);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .btn-generate:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .result-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-box {
+            background-color: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #a5d6ff;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .error-toast {
+            background-color: #450a0a;
+            border: 1px solid #7f1d1d;
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Ocultar scrollbar en general */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <form action="/upload" method="post" enctype="multipart/form-data" id="mainForm" style="display: contents;">
+        <!-- Barra Lateral -->
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Visual Timer AI</span>
+            </div>
+
+            <div class="sidebar-section">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <label class="sidebar-label" for="llm_provider" style="margin: 0;">Proveedor de IA</label>
+                    <div id="status-dot" title="Estado" style="width: 10px; height: 10px; border-radius: 50%; background: #52525b; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: background 0.3s, box-shadow 0.3s;"></div>
+                </div>
+                <select name="llm_provider" id="llm_provider" onchange="onProviderChange()">
+                    <option value="GEMINI" {% if provider == 'GEMINI' %}selected{% endif %}>Google Gemini</option>
+                    <option value="OLLAMA" {% if provider == 'OLLAMA' %}selected{% endif %}>Ollama (Local)</option>
+                    <option value="OPENROUTER" {% if provider == 'OPENROUTER' %}selected{% endif %}>OpenRouter (Claude)</option>
+                    <option value="GROQ" {% if provider == 'GROQ' %}selected{% endif %}>Groq (Rápido)</option>
+                </select>
+            </div>
+
+            <div class="sidebar-section">
+                <label class="sidebar-label" for="model_select">Modelos Gratis/Rec.</label>
+                <select id="model_select" onchange="setModelName()">
+                    <option value="">-- Selecciona --</option>
+                </select>
+            </div>
+
+            <div class="sidebar-section">
+                <label class="sidebar-label" for="model_name">ID del Modelo</label>
+                <input type="text" name="model_name" id="model_name" value="{{ model or '' }}" placeholder="ID manual del modelo...">
+            </div>
+
+            <div class="sidebar-section">
+                <label class="sidebar-label" for="personaje_bloque">Bloque Personaje</label>
+                <textarea name="personaje_bloque" id="personaje_bloque" rows="4" style="width: 100%; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; padding: 10px; font-size: 0.85rem; resize: vertical; font-family: inherit;">{{ personaje_bloque }}</textarea>
+            </div>
+
+            <div class="sidebar-section">
+                <label class="sidebar-label" for="estetica_bloque">Bloque Estética</label>
+                <textarea name="estetica_bloque" id="estetica_bloque" rows="4" style="width: 100%; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; padding: 10px; font-size: 0.85rem; resize: vertical; font-family: inherit;">{{ estetica_bloque }}</textarea>
+            </div>
+
+            <div class="info-box">
+                <strong>Tip:</strong> Groq y Gemini Flash son las opciones más rápidas para sincronizar beats.
+            </div>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="main-content">
+            <header>
+                <h1 style="margin: 0; font-size: 2rem;">Generador de Tabla Maestra</h1>
+                <p style="color: var(--text-muted);">Sincroniza rítmicamente tus prompts de video con inteligencia artificial.</p>
+            </header>
+
+            {% if error %}
+                <div class="error-toast">
+                    <strong>Error:</strong> {{ error }}
+                </div>
+            {% endif %}
+
+            <section class="upload-area">
+                <div style="margin-bottom: 20px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <h3 style="margin: 0;">Subir Archivo de Audio</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">MP3, WAV o FLAC compatibles</p>
+                </div>
+                
+                <input type="file" name="audio_file" id="audio_file" accept=".mp3,.wav,.flac" required style="color: var(--text-muted);">
+                <br>
+                <button type="submit" class="btn-generate" id="btnSubmit">Generar Sincronización</button>
+            </section>
+
+            {% if result %}
+                <section class="result-container">
+                    <div class="result-header">
+                        <h2 style="margin: 0; font-size: 1.2rem;">Resultado de Sincronización</h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button type="button" onclick="downloadResult()" style="background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Descargar .txt</button>
+                            <span style="font-size: 0.8rem; background: #27272a; padding: 4px 12px; border-radius: 20px; color: #3b82f6;">
+                                Motor: {{ provider }} {% if model %}({{ model }}){% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="result-box" id="resultBox">{{ result }}</div>
+                </section>
+            {% endif %}
+        </main>
+    </form>
+
+    <script>
+        const modelsConfig = {{ models_config | tojson }};
+
+        function downloadResult() {
+            const content = document.getElementById('resultBox').innerText;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tabla_maestra_prompts.txt';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Mostrar un estado de carga al enviar
+        document.getElementById('mainForm').onsubmit = function() {
+            const btn = document.getElementById('btnSubmit');
+            btn.innerHTML = '<svg class="spinner" width="18" height="18" viewBox="0 0 24 24" style="animation: rotate 2s linear infinite; margin-right: 8px; vertical-align: middle;"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none" style="stroke-dasharray: 40;"></circle></svg> Procesando...';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'not-allowed';
+        };
+        
+        function onProviderChange() {
+            updateModels();
+            checkStatus();
+        }
+
+        function updateModels() {
+            const provider = document.getElementById('llm_provider').value;
+            const modelSelect = document.getElementById('model_select');
+            
+            modelSelect.innerHTML = '<option value="">-- Selecciona --</option>';
+            
+            if (modelsConfig[provider]) {
+                modelsConfig[provider].forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name;
+                    modelSelect.appendChild(option);
+                });
+            }
+        }
+
+        async function checkStatus() {
+            const provider = document.getElementById('llm_provider').value;
+            const dot = document.getElementById('status-dot');
+            
+            // Estado neutro mientras carga
+            dot.style.background = '#52525b';
+            dot.style.boxShadow = 'none';
+
+            try {
+                const response = await fetch(`/status?provider=${provider}`);
+                const data = await response.json();
+                
+                if (data.status === 'online') {
+                    dot.style.background = '#22c55e'; // Verde
+                    dot.style.boxShadow = '0 0 10px #22c55e';
+                } else if (data.status === 'no_key') {
+                    dot.style.background = '#eab308'; // Amarilla (Falta API Key)
+                    dot.style.boxShadow = '0 0 10px #eab308';
+                } else {
+                    dot.style.background = '#ef4444'; // Rojo (Offline)
+                    dot.style.boxShadow = '0 0 10px #ef4444';
+                }
+            } catch (e) {
+                dot.style.background = '#ef4444';
+            }
+        }
+
+        function setModelName() {
+            const modelSelect = document.getElementById('model_select');
+            const modelNameInput = document.getElementById('model_name');
+            if (modelSelect.value) {
+                modelNameInput.value = modelSelect.value;
+            }
+        }
+
+        window.onload = onProviderChange;
+    </script>
+</body>
+</html>

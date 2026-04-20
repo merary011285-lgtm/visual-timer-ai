@@ -1,0 +1,7 @@
+google-generativeai
+pydub
+python-dotenv
+librosa
+Flask
+requests
+streamlit
