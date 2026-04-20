@@ -376,17 +376,22 @@ def generar_tabla_maestra(audio_path: str, provider: str = None, model: str = No
             f"Continúa la narrativa y la acción desde este punto, generando prompts de relleno si es apropiado."
         )
 
+        # Asegurarse de que el tempo sea un float plano
+        tempo_float = float(tempo) if not hasattr(tempo, 'item') else tempo.item()
+
         gemini_output = generar_contenido_llm(
             tiempo_inicio_str, 
             tiempo_fin_str, 
             p_bloque, 
             e_bloque,
-            tempo.item(), # Pasar el tempo como un float
+            tempo_float, # Pasar el tempo como un float
             contexto_anterior=contexto_anterior_str, # Pasando el estado como contexto anterior
             provider_override=provider,
             model_override=model
         )
-        print(f"DEBUG: Contenido generado para {tiempo_inicio_str} - {tiempo_fin_str}: {{accion_narrativa={gemini_output['accion_narrativa'][:50]}...}}") # DEBUG (Truncado)
+        # Debug robusto para evitar errores de slice
+        acc_narrativa = str(gemini_output.get('accion_narrativa', ''))
+        print(f"DEBUG: Contenido generado para {tiempo_inicio_str} - {tiempo_fin_str}: {{'accion_narrativa': '{acc_narrativa[:50]}...'}}")
 
         accion_narrativa = gemini_output["accion_narrativa"]
         movimiento_camara = gemini_output["movimiento_camara"]
