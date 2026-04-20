@@ -64,8 +64,26 @@ def main():
 
     # --- Bloques de Prompt ---
     st.sidebar.subheader("Estructura de Prompt")
-    p_bloque = st.sidebar.text_area("Bloque Personaje", value=PERSONAJE_BLOQUE, height=150)
-    e_bloque = st.sidebar.text_area("Bloque Estética", value=ESTETICA_BLOQUE, height=150)
+    
+    # Inicializar estado si no existe
+    if 'p_bloque' not in st.session_state:
+        st.session_state.p_bloque = PERSONAJE_BLOQUE
+    if 'e_bloque' not in st.session_state:
+        st.session_state.e_bloque = ESTETICA_BLOQUE
+
+    p_bloque = st.sidebar.text_area("Bloque Personaje", value=st.session_state.p_bloque, height=200, key="p_input")
+    e_bloque = st.sidebar.text_area("Bloque Estética", value=st.session_state.e_bloque, height=200, key="e_input")
+    
+    # Actualizar estado para que persista
+    st.session_state.p_bloque = p_bloque
+    st.session_state.e_bloque = e_bloque
+
+    if st.sidebar.button("🗑️ Limpiar Prompts"):
+        st.session_state.p_bloque = "[BLOQUE PERSONAJE]: "
+        st.session_state.e_bloque = "[BLOQUE ESTÉTICA]: "
+        st.rerun()
+
+    st.sidebar.divider()
 
     # --- Área Principal ---
     uploaded_file = st.file_uploader("Sube tu archivo de audio (MP3, WAV, FLAC)", type=["mp3", "wav", "flac"])
