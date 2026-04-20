@@ -32,6 +32,7 @@ Instrucciones para la Generación del Plano:
 1.  **Acción Narrativa (El Prompt Único):** Describe la acción principal o el "relleno" visual. Puede ser un momento clave, una reacción emocional, o un detalle atmosférico. Asegúrate de que [BLOQUE PERSONAJE] y [BLOQUE ESTÉTICA] se incluyan al inicio y al final de esta descripción.
 2.  **Movimiento de Cámara:** Usa un léxico cinematográfico detallado (ej., Dolly In, Crane Shot Ascending, Handheld Jittery Follow, Steadicam Smooth Push In, Zoom Dolly, Pan Right, Tilt Up, Tracking Shot).
 3.  **Intensidad:** Refleja la dinámica del segmento de audio (Baja, Media, Alta, Máxima).
+4.  **Legibilidad:** Usa una puntuación impecable. Separa las ideas con puntos. No crees párrafos gigantes; utiliza frases claras y concisas para que el prompt sea fácil de leer en formato de lista.
 
 Formato de Salida (JSON, asegúrate de que sea un JSON válido y escapado si es necesario):
 ```json
@@ -189,9 +190,15 @@ def generar_contenido_llm(tiempo_inicio: str, tiempo_fin: str, personaje_bloque:
 
 def generar_prompt_video(tiempo_inicio: str, tiempo_fin: str, accion_narrativa: str, movimiento_camara: str, intensidad: str) -> str:
     """
-    Genera el prompt completo para un bloque de video.
+    Genera el prompt completo para un bloque de video con un formato de lista legible.
     """
-    return f"{tiempo_inicio} - {tiempo_fin}|{accion_narrativa}|{movimiento_camara}|{intensidad}"
+    return (
+        f"⏳ **SEGMENTO: {tiempo_inicio} - {tiempo_fin}**\n"
+        f"🎬 **ACCION:** {accion_narrativa}\n"
+        f"🎥 **CAMARA:** {movimiento_camara}\n"
+        f"🔥 **INTENSIDAD:** {intensidad}\n"
+        f"{'-' * 45}\n"
+    )
 
 def _generar_contenido_groq(tiempo_inicio: str, tiempo_fin: str, personaje_bloque: str, estetica_bloque: str, tempo_audio: float, contexto_anterior: str = "", model=None) -> dict:
     prompt_texto = PROMPT_TEMPLATE.format(
