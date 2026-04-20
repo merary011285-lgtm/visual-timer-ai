@@ -34,6 +34,9 @@ def main():
     st.subheader("Sincroniza rítmicamente tus prompts de video")
 
     # --- Barra Lateral ---
+    if st.sidebar.button("🔄 Refrescar Pantalla"):
+        st.rerun()
+
     st.sidebar.header("Configuración de IA")
     
     provider = st.sidebar.selectbox(

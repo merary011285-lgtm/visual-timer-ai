@@ -138,40 +138,54 @@ def _generar_contenido_gemini(tiempo_inicio: str, tiempo_fin: str, personaje_blo
         contexto_anterior=contexto_anterior
     )
     
-    try:
-        response = MODELO_GEMINI.generate_content(prompt_texto)
-        return parse_json_response(response.text, personaje_bloque, estetica_bloque)
-    except Exception as e:
-        print(f"Error al llamar a Gemini: {e}")
-        return {
-            "accion_narrativa": f"{personaje_bloque} + Error de generación + {estetica_bloque}",
-            "movimiento_camara": "Error",
-            "intensidad": "Error",
-            "estado_siguiente": {}
-        }
+    response = MODELO_GEMINI.generate_content(prompt_texto)
+    return parse_json_response(response.text, personaje_bloque, estetica_bloque)
+
+import time
 
 def generar_contenido_llm(tiempo_inicio: str, tiempo_fin: str, personaje_bloque: str, estetica_bloque: str, tempo_audio: float, contexto_anterior: str = "", provider_override=None, model_override=None) -> dict:
     """
     Función envoltorio que decide qué proveedor LLM usar para generar contenido.
+    Añade lógica de reintento para errores 429 (Rate Limit).
     """
     provider = provider_override or LLM_PROVIDER
-    
-    if provider == "GEMINI":
-        return _generar_contenido_gemini(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior)
-    elif provider == "OLLAMA":
-        # Usar model_override si se proporciona para Ollama
-        current_model = model_override or LOCAL_MODEL
-        return _generar_contenido_ollama(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior, model=current_model)
-    elif provider == "OPENROUTER":
-        # Usar model_override si se proporciona para OpenRouter
-        current_model = model_override or OPENROUTER_MODEL
-        return _generar_contenido_openrouter(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior, model=current_model)
-    elif provider == "GROQ":
-        # Usar model_override si se proporciona para Groq
-        current_model = model_override or GROQ_MODEL
-        return _generar_contenido_groq(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior, model=current_model)
-    else:
-        raise ValueError(f"Proveedor LLM '{provider}' no válido configurado.")
+    max_retries = 3
+    retry_delay = 5 # segundos iniciales
+
+    for attempt in range(max_retries):
+        try:
+            if provider == "GEMINI":
+                return _generar_contenido_gemini(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior)
+            elif provider == "OLLAMA":
+                current_model = model_override or LOCAL_MODEL
+                return _generar_contenido_ollama(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior, model=current_model)
+            elif provider == "OPENROUTER":
+                current_model = model_override or OPENROUTER_MODEL
+                return _generar_contenido_openrouter(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior, model=current_model)
+            elif provider == "GROQ":
+                current_model = model_override or GROQ_MODEL
+                # Pequeño sleep preventivo para Groq que es muy estricto
+                time.sleep(1.5)
+                return _generar_contenido_groq(tiempo_inicio, tiempo_fin, personaje_bloque, estetica_bloque, tempo_audio, contexto_anterior, model=current_model)
+            else:
+                raise ValueError(f"Proveedor LLM '{provider}' no válido configurado.")
+        
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                print(f"DEBUG: Rate limit detectado (429). Reintentando en {retry_delay}s... (Intento {attempt + 1})")
+                time.sleep(retry_delay)
+                retry_delay *= 2 # Backoff exponencial
+                continue
+            else:
+                # Si no es un 429 o ya agotamos intentos, lanzamos el error original
+                print(f"ERROR en intento {attempt + 1}: {e}")
+                # Devolver un objeto de error para que la tabla no se rompa
+                return {
+                    "accion_narrativa": f"{personaje_bloque} + Error tras reintentos + {estetica_bloque}",
+                    "movimiento_camara": "Error",
+                    "intensidad": "Error",
+                    "estado_siguiente": {}
+                }
 
 def generar_prompt_video(tiempo_inicio: str, tiempo_fin: str, accion_narrativa: str, movimiento_camara: str, intensidad: str) -> str:
     """
@@ -189,27 +203,18 @@ def _generar_contenido_groq(tiempo_inicio: str, tiempo_fin: str, personaje_bloqu
         contexto_anterior=contexto_anterior
     )
     
-    try:
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": model or GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt_texto}]
-        }
-        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=data, timeout=120)
-        response.raise_for_status()
-        raw_response = response.json()["choices"][0]["message"]["content"]
-        return parse_json_response(raw_response, personaje_bloque, estetica_bloque)
-    except Exception as e:
-        print(f"Error con Groq: {e}")
-        return {
-            "accion_narrativa": f"{personaje_bloque} + Error Groq + {estetica_bloque}",
-            "movimiento_camara": "Error",
-            "intensidad": "Error",
-            "estado_siguiente": {}
-        }
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": model or GROQ_MODEL,
+        "messages": [{"role": "user", "content": prompt_texto}]
+    }
+    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=data, timeout=120)
+    response.raise_for_status()
+    raw_response = response.json()["choices"][0]["message"]["content"]
+    return parse_json_response(raw_response, personaje_bloque, estetica_bloque)
 
 def _generar_contenido_ollama(tiempo_inicio: str, tiempo_fin: str, personaje_bloque: str, estetica_bloque: str, tempo_audio: float, contexto_anterior: str = "", model=None) -> dict:
     prompt_texto = PROMPT_TEMPLATE.format(
@@ -221,25 +226,16 @@ def _generar_contenido_ollama(tiempo_inicio: str, tiempo_fin: str, personaje_blo
         contexto_anterior=contexto_anterior
     )
     
-    try:
-        headers = {'Content-Type': 'application/json'}
-        data = {
-            "model": model or LOCAL_MODEL,
-            "prompt": prompt_texto,
-            "stream": False
-        }
-        response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", headers=headers, json=data, timeout=120)
-        response.raise_for_status()
-        raw_response = response.json().get("response", "")
-        return parse_json_response(raw_response, personaje_bloque, estetica_bloque)
-    except Exception as e:
-        print(f"Error con Ollama: {e}")
-        return {
-            "accion_narrativa": f"{personaje_bloque} + Error Ollama + {estetica_bloque}",
-            "movimiento_camara": "Error",
-            "intensidad": "Error",
-            "estado_siguiente": {}
-        }
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "model": model or LOCAL_MODEL,
+        "prompt": prompt_texto,
+        "stream": False
+    }
+    response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", headers=headers, json=data, timeout=120)
+    response.raise_for_status()
+    raw_response = response.json().get("response", "")
+    return parse_json_response(raw_response, personaje_bloque, estetica_bloque)
 
 def _generar_contenido_openrouter(tiempo_inicio: str, tiempo_fin: str, personaje_bloque: str, estetica_bloque: str, tempo_audio: float, contexto_anterior: str = "", model=None) -> dict:
     prompt_texto = PROMPT_TEMPLATE.format(
@@ -251,27 +247,18 @@ def _generar_contenido_openrouter(tiempo_inicio: str, tiempo_fin: str, personaje
         contexto_anterior=contexto_anterior
     )
     
-    try:
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": model or OPENROUTER_MODEL,
-            "messages": [{"role": "user", "content": prompt_texto}]
-        }
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data, timeout=120)
-        response.raise_for_status()
-        raw_response = response.json()["choices"][0]["message"]["content"]
-        return parse_json_response(raw_response, personaje_bloque, estetica_bloque)
-    except Exception as e:
-        print(f"Error con OpenRouter: {e}")
-        return {
-            "accion_narrativa": f"{personaje_bloque} + Error OpenRouter + {estetica_bloque}",
-            "movimiento_camara": "Error",
-            "intensidad": "Error",
-            "estado_siguiente": {}
-        }
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": model or OPENROUTER_MODEL,
+        "messages": [{"role": "user", "content": prompt_texto}]
+    }
+    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data, timeout=120)
+    response.raise_for_status()
+    raw_response = response.json()["choices"][0]["message"]["content"]
+    return parse_json_response(raw_response, personaje_bloque, estetica_bloque)
 
 def generar_tabla_maestra(audio_path: str, provider: str = None, model: str = None, personaje_bloque: str = None, estetica_bloque: str = None):
     """
